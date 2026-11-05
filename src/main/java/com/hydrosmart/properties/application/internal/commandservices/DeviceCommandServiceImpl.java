@@ -15,17 +15,24 @@ public class DeviceCommandServiceImpl implements DeviceCommandService {
     public Device handle(CreateDeviceCommand c) {
         Rules.required(c.unitId(),"unit"); policy.ownUnit(c.unitId(),c.actor());
         quota.addingDevice(c.actor().userId(),c.unitId());
-        var d=new Device(c.deviceId()==null?UUID.randomUUID():c.deviceId(),c.unitId(),c.serialNumber(),c.name(),c.category(),DeviceState.registered,Instant.now());
+        String category=DeviceZone.parse(c.category());
+        DeviceZonePolicy.validate(repository.devices(c.actor().userId(),c.unitId()),null,category,DeviceState.registered);
+        var d=new Device(c.deviceId()==null?UUID.randomUUID():c.deviceId(),c.unitId(),c.serialNumber(),c.name(),category,DeviceState.registered,Instant.now());
         repository.insert(d); return d;
     }
     public Device handle(UpdateDeviceCommand c) {
+        repository.lockQuota(c.actor().userId());
         var old=policy.ownDevice(c.deviceId(),c.actor());
         if(old.state()==DeviceState.disabled && DeviceState.parse(c.state())!=DeviceState.disabled)quota.addingDevice(c.actor().userId(),old.unitId());
-        var d=new Device(old.id(),old.unitId(),old.serialNumber(),c.name(),c.category(),DeviceState.parse(c.state()),old.registeredAt());
+        String category=DeviceState.parse(c.state())==DeviceState.disabled&&old.category().equals(c.category())?old.category():DeviceZone.parse(c.category());
+        DeviceZonePolicy.validate(repository.devices(c.actor().userId(),old.unitId()),old.id(),category,DeviceState.parse(c.state()));
+        var d=new Device(old.id(),old.unitId(),old.serialNumber(),c.name(),category,DeviceState.parse(c.state()),old.registeredAt());
         repository.update(d); return d;
     }
     public void handle(DisableDeviceCommand c) {
+        repository.lockQuota(c.actor().userId());
         var old=policy.ownDevice(c.deviceId(),c.actor());
+        DeviceZonePolicy.validate(repository.devices(c.actor().userId(),old.unitId()),old.id(),old.category(),DeviceState.disabled);
         repository.update(new Device(old.id(),old.unitId(),old.serialNumber(),old.name(),old.category(),DeviceState.disabled,old.registeredAt()));
     }
 }

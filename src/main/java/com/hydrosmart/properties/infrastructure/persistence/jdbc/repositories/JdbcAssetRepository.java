@@ -50,8 +50,8 @@ public class JdbcAssetRepository implements AssetRepository {
             SELECT d.* FROM devices d JOIN units u ON u.id=d.unit_id JOIN properties p ON p.id=u.property_id WHERE
             (p.owner_user_id=? OR EXISTS(SELECT 1 FROM tenancies t WHERE t.unit_id=u.id AND t.tenant_user_id=? AND t.ends_at IS NULL AND t.starts_at<=now()))
             """;
-        return unitId==null ? jdbc.query(sql+" ORDER BY d.registered_at,d.id LIMIT 200",DEVICE,userId,userId)
-            : jdbc.query(sql+" AND d.unit_id=? ORDER BY d.registered_at,d.id LIMIT 200",DEVICE,userId,userId,unitId);
+        return unitId==null ? jdbc.query(sql+" ORDER BY (d.state='disabled'),d.registered_at,d.id LIMIT 200",DEVICE,userId,userId)
+            : jdbc.query(sql+" AND d.unit_id=? ORDER BY (d.state='disabled'),d.registered_at,d.id LIMIT 200",DEVICE,userId,userId,unitId);
     }
     public List<Tenancy> tenancies(UUID unitId) { return jdbc.query("SELECT * FROM tenancies WHERE unit_id=? ORDER BY starts_at DESC LIMIT 200",TENANCY,unitId); }
     public void insert(Property p) { jdbc.update("INSERT INTO properties(id,owner_user_id,name,address,created_at) VALUES(?,?,?,?,?)",p.id(),p.ownerUserId(),p.name(),p.address(),Timestamp.from(p.createdAt())); }
@@ -84,6 +84,6 @@ public class JdbcAssetRepository implements AssetRepository {
         var row=rows.getFirst();
         var tenants=jdbc.queryForList("SELECT tenant_user_id AS user_id,starts_at FROM tenancies WHERE unit_id=? AND ends_at IS NULL AND starts_at<=now()",id).stream()
             .map(t->Map.of("userId",t.get("user_id"),"visibleFrom",((Timestamp)t.get("starts_at")).toInstant().toString())).toList();
-        return Map.of("unitId",id,"name",row.get("name"),"ownerUserId",row.get("owner_user_id"),"tenants",tenants,"devices",jdbc.queryForList("SELECT id,name FROM devices WHERE unit_id=? ORDER BY id",id));
+        return Map.of("unitId",id,"name",row.get("name"),"ownerUserId",row.get("owner_user_id"),"tenants",tenants,"devices",jdbc.queryForList("SELECT id,name,category,state FROM devices WHERE unit_id=? ORDER BY id",id));
     }
 }
