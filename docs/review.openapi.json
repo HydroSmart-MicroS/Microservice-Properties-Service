@@ -1,0 +1,80 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "HydroSmart properties review API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "paths": {
+    "/api/v1/units": {
+      "get": {
+        "summary": "List units visible to the current account",
+        "description": "Representative operation. The example is synthetic and shows selected fields.",
+        "responses": {
+          "200": {
+            "description": "Successful query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "propertyId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                },
+                "example": [
+                  {
+                    "id": "10000000-0000-4000-8000-000000000001",
+                    "propertyId": "10000000-0000-4000-8000-000000000002",
+                    "name": "Unidad demo",
+                    "createdAt": "2026-11-03T15:00:00Z"
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication"
+          },
+          "402": {
+            "description": "An active plan is required by Gateway"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
